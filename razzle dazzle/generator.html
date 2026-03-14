@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pattern Canvas Generator</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #12161c;
+      --panel2: #0f1318;
+      --text: #e8eef6;
+      --muted: #aab6c5;
+      --line: rgba(255,255,255,.10);
+      --accent: #7aa7ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 30% 10%, #141a23 0%, var(--bg) 55%);
+      overflow: hidden;
+    }
+    .wrap {
+      height: 100%;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 12px;
+      padding: 12px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      overflow: auto;
+    }
+    .panel header {
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel header h1 {
+      font-size: 14px;
+      margin: 0 0 4px 0;
+      letter-spacing: .2px;
+    }
+    .panel header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.3;
+    }
+    .section {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+    }
+    .section:last-child { border-bottom: none; }
+    .section h2 {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+      color: var(--muted);
+    }
+    .row { display: grid; gap: 8px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    label {
+      display: grid;
+      gap: 4px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      outline: none;
+    }
+    input[type="text"]::placeholder { color: rgba(232,238,246,.35); }
+    input[type="range"] { width: 100%; }
+    .rangeLine {
+      display: grid;
+      grid-template-columns: 1fr 56px;
+      gap: 10px;
+      align-items: center;
+    }
+    .pill {
+      font-variant-numeric: tabular-nums;
+      font-size: 12px;
+      color: var(--text);
+      padding: 6px 8px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: rgba(255,255,255,.03);
+      text-align: right;
+    }
+    .btnRow { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 10px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: transform .05s ease, background .15s ease, border-color .15s ease;
+      user-select: none;
+    }
+    button:hover { background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.18); }
+    button:active { transform: translateY(1px); }
+    button.primary {
+      border-color: rgba(122,167,255,.45);
+      background: rgba(122,167,255,.16);
+    }
+    button.primary:hover { background: rgba(122,167,255,.22); }
+    .canvasShell {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(0,0,0,.25);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      position: relative;
+      overflow: hidden;
+    }
+    .canvasShell canvas {
+      display: block;
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 100%;
+      margin: 12px;
+    }
+    .hud {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.35);
+      backdrop-filter: blur(6px);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .hud b { color: var(--text); font-weight: 600; }
+    .warn {
+      margin-top: 8px;
+      font-size: 12px;
+      color: rgba(232,238,246,.7);
+      line-height: 1.35;
+    }
+    .small {
+      font-size: 11px;
+      color: rgba(232,238,246,.55);
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <aside class="panel">
+      <header>
+        <h1>Interface → Generated Canvas</h1>
+        <p>Deterministic output from a shared seed + controls.</p>
+      </header>
+
+      <div class="section">
+        <h2>Common seed</h2>
+        <div class="row">
+          <label>
+            Seed (copy/paste)
+            <input id="seed" type="text" placeholder="e.g. my-seed-123" value="demo-seed" />
+          </label>
+          <div class="btnRow">
+            <button id="seedRandom" class="primary" type="button">Generate random</button>
+            <button id="seedCopy" type="button">Copy</button>
+            <button id="seedPaste" type="button">Paste</button>
+          </div>
+          <div class="small">Tip: share the seed to reproduce the same image.</div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Distribution controls</h2>
+        <div class="row">
+          <label>
+            Type
+            <select id="distType">
+              <option value="archimedes">Archimedes spiral</option>
+              <option value="random">Random</option>
+            </select>
+          </label>
+
+          <div class="grid2">
+            <label>
+              Count
+              <div class="rangeLine">
+                <input id="siteCount" type="range" min="12" max="256" step="1" value="96" />
+                <div class="pill" id="siteCountVal"></div>
+              </div>
+            </label>
+            <label>
+              Jitter
+              <div class="rangeLine">
+                <input id="siteJitter" type="range" min="0" max="1" step="0.01" value="0.22" />
+                <div class="pill" id="siteJitterVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              X
+              <div class="rangeLine">
+                <input id="adjX" type="range" min="-1" max="1" step="0.001" value="0" />
+                <div class="pill" id="adjXVal"></div>
+              </div>
+            </label>
+            <label>
+              Y
+              <div class="rangeLine">
+                <input id="adjY" type="range" min="-1" max="1" step="0.001" value="0" />
+                <div class="pill" id="adjYVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Rotation
+              <div class="rangeLine">
+                <input id="adjRot" type="range" min="-180" max="180" step="0.1" value="0" />
+                <div class="pill" id="adjRotVal"></div>
+              </div>
+            </label>
+            <label>
+              Scale
+              <div class="rangeLine">
+                <input id="adjScale" type="range" min="0.25" max="3" step="0.01" value="1" />
+                <div class="pill" id="adjScaleVal"></div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Pattern controls</h2>
+        <div class="row">
+          <label>
+            Type
+            <select id="patternType">
+              <option value="stripedVoronoi">Striped Voronoi cells</option>
+              <option value="polkadots">Polkadots</option>
+            </select>
+          </label>
+
+          <div class="grid2">
+            <label>
+              Scale bias
+              <div class="rangeLine">
+                <input id="scaleBias" type="range" min="0" max="1" step="0.001" value="0.55" />
+                <div class="pill" id="scaleBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Scale variance
+              <div class="rangeLine">
+                <input id="scaleVar" type="range" min="0" max="1" step="0.001" value="0.25" />
+                <div class="pill" id="scaleVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Offset bias
+              <div class="rangeLine">
+                <input id="offsetBias" type="range" min="0" max="1" step="0.001" value="0.35" />
+                <div class="pill" id="offsetBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Offset variance
+              <div class="rangeLine">
+                <input id="offsetVar" type="range" min="0" max="1" step="0.001" value="0.35" />
+                <div class="pill" id="offsetVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Rotation bias
+              <div class="rangeLine">
+                <input id="rotBias" type="range" min="0" max="1" step="0.001" value="0.50" />
+                <div class="pill" id="rotBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Rotation variance
+              <div class="rangeLine">
+                <input id="rotVar" type="range" min="0" max="1" step="0.001" value="0.55" />
+                <div class="pill" id="rotVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Skew: Radius bias
+              <div class="rangeLine">
+                <input id="skewRadBias" type="range" min="0" max="1" step="0.001" value="0.50" />
+                <div class="pill" id="skewRadBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Skew: Radius variance
+              <div class="rangeLine">
+                <input id="skewRadVar" type="range" min="0" max="1" step="0.001" value="0.30" />
+                <div class="pill" id="skewRadVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Skew: Phase bias
+              <div class="rangeLine">
+                <input id="skewPhaseBias" type="range" min="0" max="1" step="0.001" value="0.50" />
+                <div class="pill" id="skewPhaseBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Skew: Phase variance
+              <div class="rangeLine">
+                <input id="skewPhaseVar" type="range" min="0" max="1" step="0.001" value="0.50" />
+                <div class="pill" id="skewPhaseVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="warn">
+            Striped Voronoi is rendered at a lower internal resolution for speed, then upscaled.
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Colour controls</h2>
+        <div class="row">
+          <div class="grid2">
+            <label>
+              Hue bias
+              <div class="rangeLine">
+                <input id="hueBias" type="range" min="0" max="1" step="0.001" value="0.08" />
+                <div class="pill" id="hueBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Hue variance
+              <div class="rangeLine">
+                <input id="hueVar" type="range" min="0" max="1" step="0.001" value="0.15" />
+                <div class="pill" id="hueVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Saturation bias
+              <div class="rangeLine">
+                <input id="satBias" type="range" min="0" max="1" step="0.001" value="0.65" />
+                <div class="pill" id="satBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Saturation variance
+              <div class="rangeLine">
+                <input id="satVar" type="range" min="0" max="1" step="0.001" value="0.12" />
+                <div class="pill" id="satVarVal"></div>
+              </div>
+            </label>
+          </div>
+
+          <div class="grid2">
+            <label>
+              Value bias
+              <div class="rangeLine">
+                <input id="valBias" type="range" min="0" max="1" step="0.001" value="0.52" />
+                <div class="pill" id="valBiasVal"></div>
+              </div>
+            </label>
+            <label>
+              Value variance
+              <div class="rangeLine">
+                <input id="valVar" type="range" min="0" max="1" step="0.001" value="0.08" />
+                <div class="pill" id="valVarVal"></div>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Export</h2>
+        <div class="btnRow">
+          <button id="downloadPng" class="primary" type="button">Download as PNG</button>
+          <button id="rerender" type="button">Re-render</button>
+        </div>
+        <div class="small">PNG exports at the current canvas size.</div>
+      </div>
+    </aside>
+
+    <main class="canvasShell">
+      <canvas id="c"></canvas>
+      <div class="hud">
+        <span>pattern: <b id="hudPattern">Striped Voronoi cells</b></span>
+        <span>•</span>
+        <span>distribution: <b id="hudDist">Archimedes spiral</b></span>
+        <span>•</span>
+        <span>seed: <b id="hudSeed">heata-demo-seed</b></span>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // ---------- Utilities: deterministic PRNG from a string seed ----------
+    // xmur3: string -> 32-bit seed generator
+    function xmur3(str) {
+      let h = 1779033703 ^ str.length;
+      for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+      }
+      return function() {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= h >>> 16;
+        return h >>> 0;
+      };
+    }
+
+    // mulberry32: 32-bit seed -> [0,1)
+    function mulberry32(a) {
+      return function() {
+        let t = a += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function makeRngFromSeed(seedStr) {
+      const seedFn = xmur3(seedStr);
+      const a = seedFn();
+      return mulberry32(a);
+    }
+
+    function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+    function lerp(a,b,t){ return a + (b-a)*t; }
+    function degToRad(d){ return d * Math.PI / 180; }
+
+    // Box-Muller for approx normal distribution
+    function randNorm(rng) {
+      // avoid 0
+      let u = 0, v = 0;
+      while (u === 0) u = rng();
+      while (v === 0) v = rng();
+      const mag = Math.sqrt(-2.0 * Math.log(u));
+      const z0 = mag * Math.cos(2.0 * Math.PI * v);
+      return z0; // mean 0, stdev 1
+    }
+
+    // Bias/variance sampler: bias in [0,1], variance in [0,1]
+    // Returns a value in [0,1] (clamped), with variance controlling spread.
+    function sampleBiasVar01(rng, bias, variance) {
+      // map variance to a useful sigma; tweak factor chosen for decent range
+      const sigma = variance * 0.35;
+      const v = bias + randNorm(rng) * sigma;
+      return clamp01(v);
+    }
+
+    // ---------- DOM ----------
+    const el = (id) => document.getElementById(id);
+
+    const seedEl = el("seed");
+    const seedRandomEl = el("seedRandom");
+    const seedCopyEl = el("seedCopy");
+    const seedPasteEl = el("seedPaste");
+
+    const distTypeEl = el("distType");
+    const siteCountEl = el("siteCount");
+    const siteJitterEl = el("siteJitter");
+
+    const adjXEl = el("adjX");
+    const adjYEl = el("adjY");
+    const adjRotEl = el("adjRot");
+    const adjScaleEl = el("adjScale");
+
+    const patternTypeEl = el("patternType");
+    const scaleBiasEl = el("scaleBias");
+    const scaleVarEl = el("scaleVar");
+    const offsetBiasEl = el("offsetBias");
+    const offsetVarEl = el("offsetVar");
+    const rotBiasEl = el("rotBias");
+    const rotVarEl = el("rotVar");
+    const skewRadBiasEl = el("skewRadBias");
+    const skewRadVarEl = el("skewRadVar");
+    const skewPhaseBiasEl = el("skewPhaseBias");
+    const skewPhaseVarEl = el("skewPhaseVar");
+    // colour controls
+    const hueBiasEl = el("hueBias");
+    const hueVarEl = el("hueVar");
+    const satBiasEl = el("satBias");
+    const satVarEl = el("satVar");
+    const valBiasEl = el("valBias");
+    const valVarEl = el("valVar");
+
+    const downloadPngEl = el("downloadPng");
+    const rerenderEl = el("rerender");
+
+    const canvas = el("c");
+    const ctx = canvas.getContext("2d", { alpha: false });
+
+    // Cap the displayed CSS size of the canvas (px). Adjust if you want a different max.
+    const canvasDisplayCap = 1200;
+    // Visual upscale factor for the displayed canvas (keeps internal buffer low-res).
+    // Set to 10 to display the canvas 10x larger than its internal resolution.
+    const canvasDisplayScale = 2;
+
+    const hudSeed = el("hudSeed");
+    const hudDist = el("hudDist");
+    const hudPattern = el("hudPattern");
+
+    // value pills
+    const pills = [
+      ["siteCountVal", siteCountEl, v => String(Math.round(v))],
+      ["siteJitterVal", siteJitterEl, v => Number(v).toFixed(2)],
+      ["adjXVal", adjXEl, v => Number(v).toFixed(3)],
+      ["adjYVal", adjYEl, v => Number(v).toFixed(3)],
+      ["adjRotVal", adjRotEl, v => `${Number(v).toFixed(1)}°`],
+      ["adjScaleVal", adjScaleEl, v => Number(v).toFixed(2)],
+      ["scaleBiasVal", scaleBiasEl, v => Number(v).toFixed(3)],
+      ["scaleVarVal", scaleVarEl, v => Number(v).toFixed(3)],
+      ["offsetBiasVal", offsetBiasEl, v => Number(v).toFixed(3)],
+      ["offsetVarVal", offsetVarEl, v => Number(v).toFixed(3)],
+      ["rotBiasVal", rotBiasEl, v => Number(v).toFixed(3)],
+      ["rotVarVal", rotVarEl, v => Number(v).toFixed(3)],
+      ["skewRadBiasVal", skewRadBiasEl, v => Number(v).toFixed(3)],
+      ["skewRadVarVal", skewRadVarEl, v => Number(v).toFixed(3)],
+      ["skewPhaseBiasVal", skewPhaseBiasEl, v => Number(v).toFixed(3)],
+      ["skewPhaseVarVal", skewPhaseVarEl, v => Number(v).toFixed(3)],
+      ["hueBiasVal", hueBiasEl, v => Number(v).toFixed(3)],
+      ["hueVarVal", hueVarEl, v => Number(v).toFixed(3)],
+      ["satBiasVal", satBiasEl, v => Number(v).toFixed(3)],
+      ["satVarVal", satVarEl, v => Number(v).toFixed(3)],
+      ["valBiasVal", valBiasEl, v => Number(v).toFixed(3)],
+      ["valVarVal", valVarEl, v => Number(v).toFixed(3)],
+    ];
+
+    function syncPills() {
+      for (const [pid, input, fmt] of pills) {
+        el(pid).textContent = fmt(input.valueAsNumber);
+      }
+    }
+
+    function syncHud() {
+      hudSeed.textContent = seedEl.value || "";
+      hudDist.textContent = distTypeEl.value === "archimedes" ? "Archimedes spiral" : "Random";
+      hudPattern.textContent =
+        patternTypeEl.value === "stripedVoronoi" ? "Striped Voronoi cells" : "Polkadots";
+    }
+
+    // ---------- Canvas sizing ----------
+    function resizeCanvasToCSSPixels() {
+      const dpr = window.devicePixelRatio || 1;
+      // Measure the parent container so sizing isn't circular (canvas -> rect -> canvas)
+      const containerRect = canvas.parentElement.getBoundingClientRect();
+      // Desired CSS size (square): use the smaller of available container width/height
+      const avail = Math.max(1, Math.min(containerRect.width, containerRect.height));
+
+      // internal buffer CSS size (before visual upscale) — keep it low-res
+      const bufferCssSize = Math.max(1, Math.min(avail / canvasDisplayScale, canvasDisplayCap / canvasDisplayScale));
+      const w = Math.max(1, Math.floor(bufferCssSize * dpr));
+      const h = w; // force square buffer
+
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+        // set CSS display size to the buffer size scaled up visually by canvasDisplayScale
+        const cssDisplayed = bufferCssSize * canvasDisplayScale;
+        // ensure it doesn't exceed available container or the cap
+        const finalCss = Math.min(cssDisplayed, containerRect.width, containerRect.height, canvasDisplayCap);
+        canvas.style.width = finalCss + "px";
+        canvas.style.height = finalCss + "px";
+      }
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+    }
+
+    // ---------- Distribution: create sites in normalized space [-1..1] ----------
+    function generateSites(rng, count, distType, jitter) {
+      const sites = [];
+      if (distType === "archimedes") {
+        // Archimedes spiral: r = a + b*theta
+        // We'll map theta over multiple turns, then normalize to fit.
+        const turns = 7.5;
+        const thetaMax = turns * 2 * Math.PI;
+        // base spiral spacing
+        const b = 1 / thetaMax; // makes r ~ [0..1]
+        for (let i = 0; i < count; i++) {
+          const t = (i + 0.5) / count;            // (0..1)
+          const theta = t * thetaMax;
+          const r = b * theta;
+          let x = r * Math.cos(theta);
+          let y = r * Math.sin(theta);
+
+          // add jitter in normalized space
+          const j = jitter * 0.22;
+          x += (rng() * 2 - 1) * j;
+          y += (rng() * 2 - 1) * j;
+
+          sites.push({ x, y });
+        }
+      } else {
+        for (let i = 0; i < count; i++) {
+          let x = rng() * 2 - 1;
+          let y = rng() * 2 - 1;
+          // jitter "inflates" randomness slightly (useful when count is small)
+          x += (rng() * 2 - 1) * jitter * 0.15;
+          y += (rng() * 2 - 1) * jitter * 0.15;
+          sites.push({ x, y });
+        }
+      }
+      return sites;
+    }
+
+    // ---------- Transform helpers ----------
+    function applyUserTransform(x, y, adj) {
+      // x,y in normalized [-1..1] space
+      // apply scale, rotation, then translation
+      const s = adj.scale;
+      const r = adj.rot;
+      const cx = x * s;
+      const cy = y * s;
+      const cr = Math.cos(r);
+      const sr = Math.sin(r);
+      const rx = cx * cr - cy * sr;
+      const ry = cx * sr + cy * cr;
+      return { x: rx + adj.x, y: ry + adj.y };
+    }
+
+    function normToPixel(nx, ny, w, h) {
+      // normalized [-1..1] -> pixel
+      const px = (nx * 0.5 + 0.5) * w;
+      const py = (ny * 0.5 + 0.5) * h;
+      return { x: px, y: py };
+    }
+
+    // ---------- Pattern: Striped Voronoi (pixel-based, lower internal resolution) ----------
+    function renderStripedVoronoi(params) {
+      const {
+        rng,
+        sites,
+        adj,
+        w, h,
+        // pattern controls
+        scaleBias, scaleVar,
+        offsetBias, offsetVar,
+        rotBias, rotVar,
+        skewRadBias, skewRadVar,
+        skewPhaseBias, skewPhaseVar,
+        // colour controls
+        hueBias, hueVar,
+        satBias, satVar,
+        valBias, valVar,
+        siteSeed,
+        // optional: draw into a provided 2D context (offscreen) and override internal max
+        ctx: targetCtx,
+        maxInternal: maxInternalOverride,
+        // use async high-quality upscaling? (false for synchronous exports)
+        useAsync: useAsyncUpscale = true
+      } = params;
+
+      const drawCtx = targetCtx || ctx;
+
+      // internal resolution (lower = faster). Allow override for hi-res exports.
+      const maxInternal = maxInternalOverride || 720; // tweak: internal long side cap
+      const dprScale = 1; // we already have DPR in canvas size
+      const longSide = Math.max(w, h);
+      const scaleDown = Math.min(1, maxInternal / longSide);
+      const iw = Math.max(64, Math.floor(w * scaleDown));
+      const ih = Math.max(64, Math.floor(h * scaleDown));
+
+      // precompute per-cell parameters (stable per site index)
+      const cell = new Array(sites.length);
+      for (let i = 0; i < sites.length; i++) {
+        // derive a per-site rng from the user seed + index so existing
+        // cell parameters remain stable when site count grows
+        const local = makeRngFromSeed((siteSeed || "") + "|" + i);
+
+        const freq01 = sampleBiasVar01(local, scaleBias, scaleVar);     // [0..1]
+        const phase01 = sampleBiasVar01(local, offsetBias, offsetVar);  // [0..1]
+        const rot01 = sampleBiasVar01(local, rotBias, rotVar);          // [0..1]
+        const skewRad01 = sampleBiasVar01(local, skewRadBias, skewRadVar); // [0..1]
+        const skewPhase01 = sampleBiasVar01(local, skewPhaseBias, skewPhaseVar); // [0..1]
+        const hue01 = sampleBiasVar01(local, hueBias, hueVar);
+        const sat01 = sampleBiasVar01(local, satBias, satVar);
+        const val01 = sampleBiasVar01(local, valBias, valVar);
+
+        // vanishing point for radial stripes: radius (near 0 to large) and phase (angle)
+        // radius mapped exponentially so bias=0 → ~0 and bias=1 → ~e^4 - 1 ≈ 53
+        const vpRadius = Math.exp(skewRad01 * 4.0) - 1.0;
+        const vpPhase = skewPhase01 * Math.PI * 2; // [0..2π]
+        const vpX = Math.cos(vpPhase) * vpRadius;
+        const vpY = Math.sin(vpPhase) * vpRadius;
+
+        // map to usable stripe params; frequency based on scale controls.
+        // Use triangle geometry so frequency scales with 1/angle:
+        // adjacent = |vpRadius| + 0.5*canvasWidth (normalized half-width == 1)
+        // opposite = 0.5*canvasHeight (normalized half-height == 1)
+        // angle = atan(opposite/adjacent). We normalize by atan(1) (π/4)
+        // so that vpRadius == 0 yields multiplier == 1.
+        const baseFreq = lerp(4.0, 40.0, freq01); // stripes per normalized width
+        const L_adj = Math.abs(vpRadius) + 1.0; // vp distance + half-width(normalized)
+        const L_opp = 1.0; // half-height(normalized)
+        const angleToEdge = Math.atan2(L_opp, L_adj);
+        const angleNorm = Math.PI * 0.25; // atan(1)
+        const geomMult = angleNorm / Math.max(angleToEdge, 1e-6);
+        const stripeFreq = 5 * baseFreq * geomMult;
+        const stripePhase = phase01 * Math.PI * 2;
+        const stripeRot = (rot01 * 2 - 1) * Math.PI; // [-pi..pi]
+
+        // base color from per-site colour controls (HSV -> HSL mapping)
+        const hue = (hue01 * 360) % 360;
+        // map saturation and value to HSL-style saturation/lightness ranges
+        const sat = lerp(0.35, 0.85, sat01);
+        const lum = lerp(0.38, 0.72, val01);
+
+        cell[i] = { stripeFreq, stripePhase, stripeRot, vpX, vpY, hue, sat, lum };
+      }
+
+      // Build ImageData
+      const img = drawCtx.createImageData(iw, ih);
+      const data = img.data;
+
+      // Voronoi: nearest site by Euclidean distance in transformed space.
+      // We'll evaluate in normalized space for each pixel:
+      // - map pixel to [-1..1]
+      // - apply user transform to sample point
+      // - find nearest site among sites (also in [-1..1])
+      // For speed: store transformed sites upfront (only sites, not pixels).
+      const tSites = sites.map(s => applyUserTransform(s.x, s.y, adj));
+
+      // Useful to keep work reasonable when siteCount is high:
+      // random subsample for nearest-neighbor? (optional)
+      // We'll keep full for correctness; internal resolution helps.
+
+      for (let y = 0; y < ih; y++) {
+        const nyBase = (y / (ih - 1)) * 2 - 1;
+        for (let x = 0; x < iw; x++) {
+          const nxBase = (x / (iw - 1)) * 2 - 1;
+
+          // sample point is already in screen-normalized space; but we want the pattern
+          // to respond to user transform, so we transform the query point the *inverse* way.
+          // Simpler approach: instead transform the sites with user transform (above),
+          // and compare in screen space (nxBase, nyBase).
+          const qx = nxBase;
+          const qy = nyBase;
+
+          let best = 0;
+          let bestD = Infinity;
+          for (let i = 0; i < tSites.length; i++) {
+            const dx = qx - tSites[i].x;
+            const dy = qy - tSites[i].y;
+            const d = dx*dx + dy*dy;
+            if (d < bestD) { bestD = d; best = i; }
+          }
+
+          const c = cell[best];
+
+          // stripes radiate from per-cell vanishing point
+          const dx = qx - c.vpX;
+          const dy = qy - c.vpY;
+          const angleToVP = Math.atan2(dy, dx);
+          // stripe frequency in "normalized units"
+          const v = Math.sin(angleToVP * c.stripeFreq + c.stripePhase);
+
+          // stripe mask
+          const m = v > 0 ? 1 : 0;
+
+          // cell base color (HSL -> RGB), modulated by stripes
+          const base = hslToRgb(c.hue / 360, c.sat, c.lum);
+          const shade = m ? 1.0 : 0.15;
+
+          const r = Math.floor(base.r * shade);
+          const g = Math.floor(base.g * shade);
+          const b = Math.floor(base.b * shade);
+
+          const idx = (y * iw + x) * 4;
+          data[idx + 0] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          data[idx + 3] = 255;
+        }
+      }
+
+      // draw upscaled to full canvas
+      // (nearest or smooth: we choose smooth for a nicer look)
+      const off = document.createElement("canvas");
+      off.width = iw;
+      off.height = ih;
+      const octx = off.getContext("2d", { alpha: false });
+      octx.putImageData(img, 0, 0);
+
+      // Use high-quality resizing when available and async is enabled (live display).
+      // For exports/offscreen, use synchronous drawImage to ensure image is complete immediately.
+      if (useAsyncUpscale && typeof createImageBitmap === 'function') {
+        try {
+          // let the browser perform a high-quality resize (often bicubic)
+          createImageBitmap(off, { resizeWidth: w, resizeHeight: h, resizeQuality: 'high' })
+            .then((bmp) => {
+              drawCtx.save();
+              drawCtx.clearRect(0, 0, w, h);
+              // bitmap already resized to target size; disable smoothing for crisp draw
+              drawCtx.imageSmoothingEnabled = false;
+              drawCtx.drawImage(bmp, 0, 0);
+              drawCtx.restore();
+            })
+            .catch(() => {
+              // fallback to regular drawImage
+              drawCtx.save();
+              drawCtx.clearRect(0, 0, w, h);
+              drawCtx.imageSmoothingEnabled = true;
+              drawCtx.drawImage(off, 0, 0, w, h);
+              drawCtx.restore();
+            });
+        } catch (e) {
+          drawCtx.save();
+          drawCtx.clearRect(0, 0, w, h);
+          drawCtx.imageSmoothingEnabled = true;
+          drawCtx.drawImage(off, 0, 0, w, h);
+          drawCtx.restore();
+        }
+      } else {
+        // Synchronous upscaling for exports (guaranteed to complete before toDataURL)
+        drawCtx.save();
+        drawCtx.clearRect(0, 0, w, h);
+        drawCtx.imageSmoothingEnabled = true;
+        drawCtx.imageSmoothingQuality = "high";
+        drawCtx.drawImage(off, 0, 0, w, h);
+        drawCtx.restore();
+      }
+    }
+
+    // ---------- Pattern: Polkadots (vector draw, fast) ----------
+    function renderPolkadots(params) {
+      const {
+        rng,
+        sites,
+        adj,
+        w, h,
+        scaleBias, scaleVar,
+        offsetBias, offsetVar,
+        rotBias, rotVar,
+        // colour controls
+        hueBias, hueVar,
+        satBias, satVar,
+        valBias, valVar,
+        siteSeed,
+        ctx: targetCtx
+      } = params;
+
+      const drawCtx = targetCtx || ctx;
+
+      drawCtx.save();
+      drawCtx.clearRect(0, 0, w, h);
+
+      // background
+      drawCtx.fillStyle = "rgb(12, 14, 18)";
+      drawCtx.fillRect(0, 0, w, h);
+
+      // precompute transformed sites and per-site dot params
+      const tSites = sites.map((s, i) => {
+        const ts = applyUserTransform(s.x, s.y, adj);
+
+        // per-site local rng derived from user seed + index so existing
+        // dots remain stable when site count grows
+        const local = makeRngFromSeed((siteSeed || "") + "|" + i);
+
+        // dot radius scale
+        const r01 = sampleBiasVar01(local, scaleBias, scaleVar);
+        // per-site colour
+        const hue01 = sampleBiasVar01(local, hueBias, hueVar);
+        const sat01 = sampleBiasVar01(local, satBias, satVar);
+        const val01 = sampleBiasVar01(local, valBias, valVar);
+        // radial offset (a small drift) derived from offset controls
+        const off01 = sampleBiasVar01(local, offsetBias, offsetVar);
+        // rotation drift angle (0..2pi)
+        const rot01 = sampleBiasVar01(local, rotBias, rotVar);
+
+        const driftR = lerp(0, 0.22, off01); // normalized drift magnitude
+        const driftA = rot01 * Math.PI * 2;
+        const dx = Math.cos(driftA) * driftR;
+        const dy = Math.sin(driftA) * driftR;
+
+        return {
+          x: ts.x + dx,
+          y: ts.y + dy,
+          r01,
+          hue: (hue01 * 360) % 360,
+          sat: lerp(0.35, 0.85, sat01),
+          lum: lerp(0.38, 0.72, val01),
+          alpha: lerp(0.55, 0.95, local())
+        };
+      });
+
+      // draw dots
+      for (let i = 0; i < tSites.length; i++) {
+        const s = tSites[i];
+        const p = normToPixel(s.x, s.y, w, h);
+
+        // radius in pixels: depends on canvas min dim
+        const minDim = Math.min(w, h);
+        const rad = lerp(minDim * 0.006, minDim * 0.05, s.r01);
+
+        const col = hslToRgb(s.hue / 360, s.sat, s.lum);
+        drawCtx.fillStyle = `rgba(${col.r|0},${col.g|0},${col.b|0},${s.alpha.toFixed(3)})`;
+
+        drawCtx.beginPath();
+        drawCtx.arc(p.x, p.y, rad, 0, Math.PI * 2);
+        drawCtx.fill();
+      }
+
+      // subtle vignette
+      const grad = drawCtx.createRadialGradient(w*0.5, h*0.5, Math.min(w,h)*0.1, w*0.5, h*0.5, Math.max(w,h)*0.65);
+      grad.addColorStop(0, "rgba(0,0,0,0)");
+      grad.addColorStop(1, "rgba(0,0,0,0.35)");
+      drawCtx.fillStyle = grad;
+      drawCtx.fillRect(0, 0, w, h);
+
+      drawCtx.restore();
+    }
+
+    // ---------- Color helper: HSL -> RGB ----------
+    function hslToRgb(h, s, l) {
+      // h,s,l in [0..1]
+      let r, g, b;
+
+      if (s === 0) {
+        r = g = b = l; // achromatic
+      } else {
+        const hue2rgb = (p, q, t) => {
+          if (t < 0) t += 1;
+          if (t > 1) t -= 1;
+          if (t < 1/6) return p + (q - p) * 6 * t;
+          if (t < 1/2) return q;
+          if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+          return p;
+        };
+        const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+        const p = 2 * l - q;
+        r = hue2rgb(p, q, h + 1/3);
+        g = hue2rgb(p, q, h);
+        b = hue2rgb(p, q, h - 1/3);
+      }
+      return { r: r * 255, g: g * 255, b: b * 255 };
+    }
+
+    // ---------- Render orchestration ----------
+    let rafPending = false;
+    function requestRender() {
+      if (rafPending) return;
+      rafPending = true;
+      requestAnimationFrame(() => {
+        rafPending = false;
+        render();
+      });
+    }
+
+    function getParams() {
+      const seed = seedEl.value || "";
+      const distType = distTypeEl.value;
+      const patternType = patternTypeEl.value;
+
+      const siteCount = siteCountEl.valueAsNumber;
+      const siteJitter = siteJitterEl.valueAsNumber;
+
+      const adj = {
+        x: adjXEl.valueAsNumber,
+        y: adjYEl.valueAsNumber,
+        rot: degToRad(adjRotEl.valueAsNumber),
+        scale: adjScaleEl.valueAsNumber
+      };
+      const scaleBias = scaleBiasEl.valueAsNumber;
+      const scaleVar = scaleVarEl.valueAsNumber;
+      const offsetBias = offsetBiasEl.valueAsNumber;
+      const offsetVar = offsetVarEl.valueAsNumber;
+      const rotBias = rotBiasEl.valueAsNumber;
+      const rotVar = rotVarEl.valueAsNumber;
+      const skewRadBias = skewRadBiasEl.valueAsNumber;
+      const skewRadVar = skewRadVarEl.valueAsNumber;
+      const skewPhaseBias = skewPhaseBiasEl.valueAsNumber;
+      const skewPhaseVar = skewPhaseVarEl.valueAsNumber;
+      const hueBias = hueBiasEl.valueAsNumber;
+      const hueVar = hueVarEl.valueAsNumber;
+      const satBias = satBiasEl.valueAsNumber;
+      const satVar = satVarEl.valueAsNumber;
+      const valBias = valBiasEl.valueAsNumber;
+      const valVar = valVarEl.valueAsNumber;
+
+      return {
+        seed, distType, patternType,
+        siteCount, siteJitter,
+        adj,
+        scaleBias, scaleVar,
+        offsetBias, offsetVar,
+        rotBias, rotVar,
+        skewRadBias, skewRadVar,
+        skewPhaseBias, skewPhaseVar,
+        hueBias, hueVar,
+        satBias, satVar,
+        valBias, valVar
+      };
+    }
+
+    function render() {
+      resizeCanvasToCSSPixels();
+      syncPills();
+      syncHud();
+
+      const p = getParams();
+
+      // One rng for everything; includes all values so the same seed + controls is deterministic.
+      // We "salt" with serialized params so changes in UI reshape output.
+      const salt =
+        `${p.seed}|dist:${p.distType}|pat:${p.patternType}|n:${p.siteCount}|j:${p.siteJitter.toFixed(3)}` +
+        `|adj:${p.adj.x.toFixed(3)},${p.adj.y.toFixed(3)},${p.adj.rot.toFixed(4)},${p.adj.scale.toFixed(3)}` +
+        `|pb:${p.scaleBias.toFixed(3)},${p.scaleVar.toFixed(3)},${p.offsetBias.toFixed(3)},${p.offsetVar.toFixed(3)},${p.rotBias.toFixed(3)},${p.rotVar.toFixed(3)},${p.skewRadBias.toFixed(3)},${p.skewRadVar.toFixed(3)},${p.skewPhaseBias.toFixed(3)},${p.skewPhaseVar.toFixed(3)},${p.hueBias.toFixed(3)},${p.hueVar.toFixed(3)},${p.satBias.toFixed(3)},${p.satVar.toFixed(3)},${p.valBias.toFixed(3)},${p.valVar.toFixed(3)}`;
+
+      const rng = makeRngFromSeed(salt);
+
+      // Sites are generated in base normalized space, then the pattern renderer applies the transform.
+      const sites = generateSites(rng, p.siteCount, p.distType, p.siteJitter);
+
+      const args = {
+        rng,
+        sites,
+        adj: p.adj,
+        w: canvas.width,
+        h: canvas.height,
+        scaleBias: p.scaleBias,
+        scaleVar: p.scaleVar,
+        hueBias: p.hueBias,
+        hueVar: p.hueVar,
+        satBias: p.satBias,
+        satVar: p.satVar,
+        valBias: p.valBias,
+        valVar: p.valVar,
+        offsetBias: p.offsetBias,
+        offsetVar: p.offsetVar,
+        rotBias: p.rotBias,
+        rotVar: p.rotVar,
+        skewRadBias: p.skewRadBias,
+        skewRadVar: p.skewRadVar,
+        skewPhaseBias: p.skewPhaseBias,
+        skewPhaseVar: p.skewPhaseVar,
+        // siteSeed is the stable seed used to derive per-site RNGs; keep
+        // it independent from the UI salt so control tweaks don't reseed cells
+        siteSeed: p.seed
+      };
+
+      if (p.patternType === "stripedVoronoi") {
+        renderStripedVoronoi(args);
+      } else {
+        renderPolkadots(args);
+      }
+    }
+
+    // ---------- Seed helpers ----------
+    function randomSeed() {
+      // short-ish readable seed
+      const alphabet = "abcdefghjkmnpqrstuvwxyz23456789";
+      let s = "";
+      const n = 18;
+      // Use crypto if available (doesn't affect deterministic generation beyond seed)
+      if (crypto && crypto.getRandomValues) {
+        const buf = new Uint32Array(n);
+        crypto.getRandomValues(buf);
+        for (let i = 0; i < n; i++) s += alphabet[buf[i] % alphabet.length];
+      } else {
+        for (let i = 0; i < n; i++) s += alphabet[Math.floor(Math.random() * alphabet.length)];
+      }
+      return s;
+    }
+
+    seedRandomEl.addEventListener("click", () => {
+      seedEl.value = randomSeed();
+      requestRender();
+    });
+
+    seedCopyEl.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(seedEl.value || "");
+        seedCopyEl.textContent = "Copied!";
+        setTimeout(() => (seedCopyEl.textContent = "Copy"), 900);
+      } catch {
+        // fallback
+        seedEl.select();
+        document.execCommand("copy");
+      }
+    });
+
+    seedPasteEl.addEventListener("click", async () => {
+      try {
+        const t = await navigator.clipboard.readText();
+        if (typeof t === "string") seedEl.value = t.trim();
+        requestRender();
+      } catch {
+        // if clipboard read blocked, focus field so user can paste manually
+        seedEl.focus();
+      }
+    });
+
+    // ---------- Download ----------
+    downloadPngEl.addEventListener("click", async () => {
+      // Render a high-resolution (2000x2000) image into an offscreen canvas
+      const targetSize = 2000;
+      const a = document.createElement("a");
+      const p = getParams();
+
+      // Recreate the same salted RNG and sites so the hi-res render matches on-screen
+      const salt =
+        `${p.seed}|dist:${p.distType}|pat:${p.patternType}|n:${p.siteCount}|j:${p.siteJitter.toFixed(3)}` +
+        `|adj:${p.adj.x.toFixed(3)},${p.adj.y.toFixed(3)},${p.adj.rot.toFixed(4)},${p.adj.scale.toFixed(3)}` +
+        `|pb:${p.scaleBias.toFixed(3)},${p.scaleVar.toFixed(3)},${p.offsetBias.toFixed(3)},${p.offsetVar.toFixed(3)},${p.rotBias.toFixed(3)},${p.rotVar.toFixed(3)},${p.skewRadBias.toFixed(3)},${p.skewRadVar.toFixed(3)},${p.skewPhaseBias.toFixed(3)},${p.skewPhaseVar.toFixed(3)},${p.hueBias.toFixed(3)},${p.hueVar.toFixed(3)},${p.satBias.toFixed(3)},${p.satVar.toFixed(3)},${p.valBias.toFixed(3)},${p.valVar.toFixed(3)}`;
+
+      const rng = makeRngFromSeed(salt);
+      const sites = generateSites(rng, p.siteCount, p.distType, p.siteJitter);
+
+      const off = document.createElement("canvas");
+      off.width = targetSize;
+      off.height = targetSize;
+      const octx = off.getContext("2d", { alpha: false });
+      octx.imageSmoothingEnabled = true;
+      octx.imageSmoothingQuality = "high";
+
+      const args = {
+        rng,
+        sites,
+        adj: p.adj,
+        w: off.width,
+        h: off.height,
+        scaleBias: p.scaleBias,
+        scaleVar: p.scaleVar,
+        hueBias: p.hueBias,
+        hueVar: p.hueVar,
+        satBias: p.satBias,
+        satVar: p.satVar,
+        valBias: p.valBias,
+        valVar: p.valVar,
+        offsetBias: p.offsetBias,
+        offsetVar: p.offsetVar,
+        rotBias: p.rotBias,
+        rotVar: p.rotVar,
+        skewRadBias: p.skewRadBias,
+        skewRadVar: p.skewRadVar,
+        skewPhaseBias: p.skewPhaseBias,
+        skewPhaseVar: p.skewPhaseVar,
+        siteSeed: p.seed,
+        ctx: octx,
+        // ensure internal rasterization is done at full target resolution for best quality
+        maxInternal: Math.max(off.width, off.height),
+        // use synchronous upscaling for exports so image is complete immediately
+        useAsync: false
+      };
+
+      if (p.patternType === "stripedVoronoi") {
+        renderStripedVoronoi(args);
+      } else {
+        renderPolkadots(args);
+      }
+
+      // small delay to ensure rendering completes before export
+      await new Promise(resolve => setTimeout(resolve, 16));
+
+      const safeSeed = (seedEl.value || "image").replace(/[^a-z0-9-_]+/gi, "_").slice(0, 42);
+      a.download = `pattern_${safeSeed}.png`;
+      a.href = off.toDataURL("image/png");
+      document.body.appendChild(a);
+      a.click();
+      a.remove();}
+    );
+
+    rerenderEl.addEventListener("click", () => requestRender());
+
+    // ---------- Wire inputs ----------
+    const inputs = [
+      seedEl,
+      distTypeEl, siteCountEl, siteJitterEl,
+      adjXEl, adjYEl, adjRotEl, adjScaleEl,
+      patternTypeEl,
+      scaleBiasEl, scaleVarEl,
+      offsetBiasEl, offsetVarEl,
+      rotBiasEl, rotVarEl,
+      skewRadBiasEl, skewRadVarEl,
+      skewPhaseBiasEl, skewPhaseVarEl,
+      hueBiasEl, hueVarEl,
+      satBiasEl, satVarEl,
+      valBiasEl, valVarEl
+    ];
+
+    for (const i of inputs) {
+      i.addEventListener("input", requestRender);
+      i.addEventListener("change", requestRender);
+    }
+
+    // ---------- Boot ----------
+    window.addEventListener("resize", requestRender);
+    syncPills();
+    syncHud();
+    render();
+  </script>
+</body>
+</html>

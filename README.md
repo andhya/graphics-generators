@@ -2,10 +2,15 @@
 
 Generative art scripts.
 
-## Scripts
+## snowflake generator
+Python script that generates snowflake patterns, and puts them on an archimedes spiral pattern.
+Used for Xmas cards 2021.
 
-### chaos.py
-Generates an SVG of chaotic random lines at A3 size. Uses `svgwrite`. Run with `python3 chaos.py` — outputs `chaotic_lines.svg`.
+### chaotic lines
+Python script that generates an SVG of chaotic random lines at A3 size.
+Used for [`Tony Dun Gatwick`](https://letsdroneout.com/shop/#!/tony+dun+gatwick-A66fdc8263de4d46a1d17f6b6?productType=1459&sellable=nAeYep91vXSzaLo1yyAd-1459-215&appearance=839&size=251) to do the chemtrails.
 
-## Adding More
-Drop new generator scripts in the root. Each should be self-contained and produce its output (SVG, PNG, etc.) in the same directory.
+
+## razzle dazzle
+Html webpage that allows controlled generation of patterns from an array of points and vectors. Principally dazzle camo pattern, but polka dots as a side product.
+Used for LiIon wrap designs.
