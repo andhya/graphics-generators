@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>graphics-generators</title>
+  <style>
+    :root {
+      --bg: #0b0d10;
+      --panel: #12161c;
+      --panel2: #0f1318;
+      --text: #e8eef6;
+      --muted: #aab6c5;
+      --line: rgba(255,255,255,.10);
+      --accent: #7aa7ff;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+      color: var(--text);
+      background: radial-gradient(1200px 800px at 30% 10%, #141a23 0%, var(--bg) 55%);
+      min-height: 100vh;
+      padding: 48px 24px 64px;
+    }
+    header {
+      max-width: 720px;
+      margin: 0 auto 48px;
+    }
+    header h1 {
+      font-size: 22px;
+      font-weight: 600;
+      letter-spacing: .3px;
+      margin: 0 0 8px;
+      color: var(--accent);
+    }
+    header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    .grid {
+      max-width: 720px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, var(--panel) 0%, var(--panel2) 100%);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      padding: 20px;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .card:hover {
+      border-color: rgba(122,167,255,.35);
+      box-shadow: 0 12px 36px rgba(0,0,0,.5);
+    }
+    .card.soon {
+      opacity: .5;
+      pointer-events: none;
+    }
+    .card h2 {
+      font-size: 14px;
+      font-weight: 600;
+      margin: 0 0 8px;
+      color: var(--accent);
+    }
+    .card p {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 16px;
+      line-height: 1.45;
+    }
+    .card .open {
+      font-size: 12px;
+      color: var(--accent);
+      letter-spacing: .3px;
+    }
+    .card.soon .open {
+      color: var(--muted);
+    }
+    footer {
+      max-width: 720px;
+      margin: 48px auto 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    footer a { color: var(--muted); }
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>graphics-generators</h1>
+    <p>A small collection of interactive generative art tools.</p>
+  </header>
+
+  <div class="grid">
+    <a class="card" href="./razzle-dazzle/">
+      <h2>Razzle Dazzle</h2>
+      <p>Interactive dazzle camo and polka dot pattern generator with full color and geometry controls.</p>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="./chaotic-lines/">
+      <h2>Chaotic Lines</h2>
+      <p>400 random lines thrown across a square canvas. Simple, satisfying, endlessly different.</p>
+      <span class="open">Open →</span>
+    </a>
+    <a class="card" href="./snowflakes/">
+      <h2>Snowflakes</h2>
+      <p>1000 hexagonal snowflakes placed on a Fibonacci spiral.</p>
+      <span class="open">Open →</span>
+    </a>
+  </div>
+
+  <footer>
+    <a href="https://github.com/andhya/graphics-generators">github.com/andhya/graphics-generators</a>
+  </footer>
+</body>
+</html>
